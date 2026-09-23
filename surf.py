@@ -3,6 +3,7 @@ import os
 import re
 import sys
 from datetime import datetime
+from zoneinfo import ZoneInfo
 import requests
 from bs4 import BeautifulSoup
 
@@ -189,7 +190,8 @@ def get_live_data(beach_slug):
   if am:
     at = am.group(1) if "°" in am.group(1) else am.group(1) + "°C"
 
-  current_hour = datetime.now().hour
+  # חישוב השעה לפי שעון ישראל
+  current_hour = datetime.now(ZoneInfo("Asia/Jerusalem")).hour
   forecast = []
   current_data = {}
 
@@ -266,7 +268,6 @@ def get_live_data(beach_slug):
               f"{sd.group(1) if sd else ''} ({sp.group(1) if sp else ''})".strip()
           )
 
-          # סמל מופיע אך ורק כשיש גשם / ממטרים / סערה
           w_icon = ""
           if any(w in row_text for w in ["גשם", "ממטרים", "סערה"]):
             w_icon = "☂"
