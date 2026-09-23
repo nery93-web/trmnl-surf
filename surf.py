@@ -69,7 +69,6 @@ BEACHES = {
 
 
 def get_active_beach():
-  """מזהה את החוף מתוך הפרמטר שנשלח או שומר אותו בקובץ הקונפיגורציה"""
   if len(sys.argv) > 1 and sys.argv[1].strip():
     beach = sys.argv[1].strip()
     try:
@@ -190,7 +189,6 @@ def get_live_data(beach_slug):
   if am:
     at = am.group(1) if "°" in am.group(1) else am.group(1) + "°C"
 
-  # חישוב השעה לפי שעון ישראל
   current_hour = datetime.now(ZoneInfo("Asia/Jerusalem")).hour
   forecast = []
   current_data = {}
@@ -208,7 +206,6 @@ def get_live_data(beach_slug):
 
     summary_txt, astro_txt = extract_summary_and_astro(anchor)
 
-    wave_12, desc_12, swell_12, wind_12, icon_12 = 0, "", "", "", ""
     day_rows, star_details = [], []
 
     curr = anchor.next_sibling
@@ -288,19 +285,9 @@ def get_live_data(beach_slug):
               "swell": swell_str,
               "icon": w_icon,
           })
-
-          if hour_str in ["12", "12:00"]:
-            nums = re.findall(r"\d+", wave_txt)
-            if nums:
-              wave_12 = int(nums[-1])
-            desc_12 = wave_desc if wave_desc else ""
-            if swell_str:
-              swell_12 = swell_str
-            if wind_str:
-              wind_12 = wind_str
-            icon_12 = w_icon
       curr = curr.next_sibling
 
+    # 1. נתוני הבלוק העליון להיום (השעה הקרובה ביותר כרגע)
     if d == 0 and day_rows:
       closest = max(
           [r for r in day_rows if r["hour_num"] <= current_hour],
@@ -324,21 +311,34 @@ def get_live_data(beach_slug):
           "swell": closest["swell"],
       }
 
+    # 2. חילוץ שורת שעה 12:00 בצהריים באופן מוחלט עבור טבלת התחזית
+    row_12 = None
+    if day_rows:
+      row_12 = next((r for r in day_rows if r["hour_num"] == 12), None)
+      if not row_12:
+        row_12 = min(day_rows, key=lambda r: abs(r["hour_num"] - 12))
+
+    if row_12:
+      nums = re.findall(r"\d+", row_12["wave"])
+      wave_val = int(nums[-1]) if nums else 40
+      desc_val = row_12["desc"] if row_12["desc"] else "ים גלי"
+      swell_val = row_12["swell"]
+      wind_val = row_12["wind"]
+      icon_val = row_12["icon"]
+    else:
+      wave_val, desc_val, swell_val, wind_val, icon_val = 40, "ים גלי", "", "", ""
+
     stars_formatted = f"★ {', '.join(star_details)}" if star_details else ""
 
     forecast.append({
         "day": day_name,
         "date": day_date,
-        "wave": wave_12 if wave_12 > 0 else 40,
-        "desc": desc_12 if desc_12 else "ים גלי",
-        "swell": swell_12
-        if swell_12
-        else (day_rows[0]["swell"] if day_rows else ""),
-        "wind": wind_12
-        if wind_12
-        else (day_rows[0]["wind"] if day_rows else ""),
+        "wave": wave_val,
+        "desc": desc_val,
+        "swell": swell_val,
+        "wind": wind_val,
         "stars": stars_formatted,
-        "icon": icon_12,
+        "icon": icon_val,
     })
 
   return {
