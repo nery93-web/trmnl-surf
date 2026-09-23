@@ -2,8 +2,7 @@ name: Update TRMNL Surf Forecast
 
 on:
   schedule:
-    - cron: '0 4,7,10,13,16,19 * * *' # הרצה אוטומטית מדי כמה שעות
-  workflow_dispatch:
+    - cron: '0 0,3,6,9,12,15,18,21 * * *'
     inputs:
       beach:
         description: 'בחר חוף מתוך הרשימה:'
