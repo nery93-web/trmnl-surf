@@ -33,12 +33,10 @@ def extract_summary_and_astro(anchor):
     t = curr.get_text(" ", strip=True) if hasattr(curr, "get_text") else ""
     
     if "זריחה" in t and "שקיעה" in t:
-      # 1. חילוץ אסטרונומיה (זריחה, שקיעה, ירח)
       astro_m = re.search(r"זריחה:\s*(\d+:\d+).*?שקיעה:\s*(\d+:\d+).*?ירח:\s*(\d+%)", t)
       if astro_m:
         astro_txt = f"זריחה {astro_m.group(1)} · שקיעה {astro_m.group(2)} · ירח {astro_m.group(3)}"
 
-      # 2. חילוץ סיכום נקי
       if "בבוקר" in t:
         raw_summary = "בבוקר" + t.split("בבוקר")[1].split("זריחה")[0]
         clean_s = re.sub(r'[\U00010000-\U0010ffff\u2600-\u27ff\u2b50\u2190-\u21ff]', '', raw_summary)
@@ -51,22 +49,24 @@ def extract_summary_and_astro(anchor):
 
 
 def extract_tides(page_text):
-  """מחלץ את שעות הגאות והשפל מתוך כל טקסט העמוד"""
-  highs = re.findall(r"גאות[\s:]*(\d{1,2}:\d{2})", page_text)
-  lows = re.findall(r"שפל[\s:]*(\d{1,2}:\d{2})", page_text)
+  """מחלץ גאות ושפל באופן גמיש מתוך אלמנטים מופרדים"""
+  # חיפוש ביטויים כמו: גאות ... 09:11 או שפל ... 15:33
+  raw_matches = re.findall(r"(גאות|שפל)[^\d]*(\d{1,2}:\d{2})", page_text)
   
+  highs, lows = [], []
+  for t_type, t_time in raw_matches:
+    if t_type == "גאות" and t_time not in highs:
+      highs.append(t_time)
+    elif t_type == "שפל" and t_time not in lows:
+      lows.append(t_time)
+
   parts = []
   if highs:
-    # הסרת כפילויות ושמירה על סדר
-    unique_highs = list(dict.fromkeys(highs))
-    parts.append(f"גאות {', '.join(unique_highs)}")
+    parts.append(f"גאות {', '.join(highs)}")
   if lows:
-    unique_lows = list(dict.fromkeys(lows))
-    parts.append(f"שפל {', '.join(unique_lows)}")
-    
-  if parts:
-    return " · " + " · ".join(parts)
-  return ""
+    parts.append(f"שפל {', '.join(lows)}")
+
+  return " · " + " · ".join(parts) if parts else ""
 
 
 def get_live_data():
@@ -80,7 +80,6 @@ def get_live_data():
   soup = BeautifulSoup(res.text, "html.parser")
   page_text = soup.get_text()
 
-  # חילוץ גאות ושפל
   tides_txt = extract_tides(page_text)
 
   wt, at = "28°C", "29°C"
