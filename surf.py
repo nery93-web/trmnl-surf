@@ -22,18 +22,36 @@ def get_wax(temp_str):
     return "שעוות מעבר"
 
 
-def extract_summary(anchor):
+def extract_summary_and_astro(anchor):
+  """מחלץ גם את הסיכום וגם את נתוני האסטרונומיה (זריחה, שקיעה, ירח) בנפרד"""
   curr = anchor
+  summary_txt = ""
+  astro_txt = ""
+
   for _ in range(40):
     if not curr:
       break
     t = curr.get_text(" ", strip=True) if hasattr(curr, "get_text") else ""
     if "זריחה" in t and "שקיעה" in t:
+      # חילוץ האסטרונומיה המדויקת
+      astro_m = re.search(r"(זריחה:\s*\d+:\d+.*?שקיעה:\s*\d+:\d+.*?ירח:\s*\d+%)", t)
+      if astro_m:
+         # מסירים אימוג'ים שנדבקים לטקסט האסטרונומיה
+         astro_txt = re.sub(r'[\U00010000-\U0010ffff\u2600-\u27ff\u2b50\u2190-\u21ff]', '', astro_m.group(1)).strip()
+         astro_txt = astro_txt.replace(":", " ") # הופך "זריחה: 06:20" ל-"זריחה 06:20" בשביל הניקיון
+         astro_txt = re.sub(r'\s+', ' ', astro_txt) # מנקה רווחים כפולים
+         astro_txt = astro_txt.replace("זריחה", "זריחה").replace("שקיעה", "· שקיעה").replace("ירח", "· ירח")
+
+
+      # חילוץ הסיכום המקורי (מהתחלה ועד הירח) כמו שעבד לך קודם
       m = re.search(r"(בבוקר.*?ירח:\s*\d+%)", t)
       if m:
-        return m.group(1).strip()
+        summary_txt = m.group(1).strip()
+      
+      return summary_txt, astro_txt
+
     curr = curr.next_element
-  return "--"
+  return "--", "--"
 
 
 def get_live_data():
@@ -71,7 +89,9 @@ def get_live_data():
     parts = h2_text.split()
     day_name = parts[0] if parts else (f"היום" if d == 0 else f"יום {d}")
     day_date = parts[1] if len(parts) > 1 else ""
-    summary_txt = extract_summary(anchor)
+    
+    # שימוש בפונקציה החדשה שמחזירה גם סיכום וגם אסטרונומיה
+    summary_txt, astro_txt = extract_summary_and_astro(anchor)
 
     wave_12, desc_12, swell_12, wind_12, icon_12 = 0, "--", "--", "--", "☀️"
     day_rows, star_details = [], []
@@ -181,6 +201,7 @@ def get_live_data():
           "water_temp": wt,
           "wax": get_wax(wt),
           "summary": summary_txt,
+          "astro": astro_txt, # <--- הוספנו את המשתנה החדש לכאן
           "stars": ", ".join(star_details) if star_details else "אין",
           "hour": closest["hour"],
           "wave": closest["wave"],
