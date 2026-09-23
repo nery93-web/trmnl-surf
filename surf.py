@@ -33,22 +33,40 @@ def extract_summary_and_astro(anchor):
     t = curr.get_text(" ", strip=True) if hasattr(curr, "get_text") else ""
     
     if "זריחה" in t and "שקיעה" in t:
-      # 1. חילוץ נקי של אסטרונומיה בפורמט: זריחה 06:29 · שקיעה 18:36 · ירח 89%
+      # 1. חילוץ אסטרונומיה (זריחה, שקיעה, ירח)
       astro_m = re.search(r"זריחה:\s*(\d+:\d+).*?שקיעה:\s*(\d+:\d+).*?ירח:\s*(\d+%)", t)
       if astro_m:
         astro_txt = f"זריחה {astro_m.group(1)} · שקיעה {astro_m.group(2)} · ירח {astro_m.group(3)}"
 
-      # 2. חילוץ מדויק של הסיכום בלבד (ממילת "בבוקר" ועד "זריחה") ללא נתוני הטבלה
+      # 2. חילוץ סיכום נקי
       if "בבוקר" in t:
         raw_summary = "בבוקר" + t.split("בבוקר")[1].split("זריחה")[0]
-        # ניקוי אימוג'ים ורווחים כפולים
         clean_s = re.sub(r'[\U00010000-\U0010ffff\u2600-\u27ff\u2b50\u2190-\u21ff]', '', raw_summary)
         summary_txt = re.sub(r'\s+', ' ', clean_s).strip(" -.")
       
       return summary_txt, astro_txt
 
     curr = curr.next_element
-  return "--", "--"
+  return "", ""
+
+
+def extract_tides(page_text):
+  """מחלץ את שעות הגאות והשפל מתוך כל טקסט העמוד"""
+  highs = re.findall(r"גאות[\s:]*(\d{1,2}:\d{2})", page_text)
+  lows = re.findall(r"שפל[\s:]*(\d{1,2}:\d{2})", page_text)
+  
+  parts = []
+  if highs:
+    # הסרת כפילויות ושמירה על סדר
+    unique_highs = list(dict.fromkeys(highs))
+    parts.append(f"גאות {', '.join(unique_highs)}")
+  if lows:
+    unique_lows = list(dict.fromkeys(lows))
+    parts.append(f"שפל {', '.join(unique_lows)}")
+    
+  if parts:
+    return " · " + " · ".join(parts)
+  return ""
 
 
 def get_live_data():
@@ -61,6 +79,9 @@ def get_live_data():
 
   soup = BeautifulSoup(res.text, "html.parser")
   page_text = soup.get_text()
+
+  # חילוץ גאות ושפל
+  tides_txt = extract_tides(page_text)
 
   wt, at = "28°C", "29°C"
   wm = re.search(r"מים\s*[\.\:]?\s*([\d\.]+°?)", page_text)
@@ -88,7 +109,7 @@ def get_live_data():
     
     summary_txt, astro_txt = extract_summary_and_astro(anchor)
 
-    wave_12, desc_12, swell_12, wind_12, icon_12 = 0, "--", "--", "--", "☀️"
+    wave_12, desc_12, swell_12, wind_12, icon_12 = 0, "", "", "", "☀️"
     day_rows, star_details = [], []
 
     curr = anchor.next_sibling
@@ -175,7 +196,7 @@ def get_live_data():
             nums = re.findall(r"\d+", wave_txt)
             if nums:
               wave_12 = int(nums[-1])
-            desc_12 = wave_desc if wave_desc else "--"
+            desc_12 = wave_desc if wave_desc else ""
             if swell_str:
               swell_12 = swell_str
             if wind_str:
@@ -197,7 +218,8 @@ def get_live_data():
           "wax": get_wax(wt),
           "summary": summary_txt,
           "astro": astro_txt, 
-          "stars": ", ".join(star_details) if star_details else "אין",
+          "tides": tides_txt,
+          "stars": ", ".join(star_details) if star_details else "",
           "hour": closest["hour"],
           "wave": closest["wave"],
           "desc": closest["desc"],
@@ -205,19 +227,15 @@ def get_live_data():
           "swell": closest["swell"],
       }
 
-    stars_formatted = f"★ {', '.join(star_details)}" if star_details else "--"
+    stars_formatted = f"★ {', '.join(star_details)}" if star_details else ""
 
     forecast.append({
         "day": day_name,
         "date": day_date,
         "wave": wave_12 if wave_12 > 0 else 40,
-        "desc": desc_12 if desc_12 != "--" else "ים גלי",
-        "swell": swell_12
-        if swell_12 != "--"
-        else (day_rows[0]["swell"] if day_rows else "--"),
-        "wind": wind_12
-        if wind_12 != "--"
-        else (day_rows[0]["wind"] if day_rows else "--"),
+        "desc": desc_12 if desc_12 else "ים גלי",
+        "swell": swell_12 if swell_12 else (day_rows[0]["swell"] if day_rows else ""),
+        "wind": wind_12 if wind_12 else (day_rows[0]["wind"] if day_rows else ""),
         "stars": stars_formatted,
         "icon": icon_12,
     })
