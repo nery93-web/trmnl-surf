@@ -2,25 +2,83 @@ name: Update TRMNL Surf Forecast
 
 on:
   schedule:
-    - cron: '0 * * * *'
+    - cron: '0 4,7,10,13,16,19 * * *' # הרצה אוטומטית מדי כמה שעות
   workflow_dispatch:
+    inputs:
+      beach:
+        description: 'בחר חוף מתוך הרשימה:'
+        required: true
+        default: 'olga'
+        type: choice
+        options:
+          - olga
+          - hilton
+          - herzliya
+          - palmachim
+          - sdot-yam
+          - caesarea
+          - maravi
+          - dolphinarium
+          - poleg
+          - sironit
+          - bat-yam
+          - ashdod
+          - ashqelon
+          - haifa-peak
+          - haifa-backdoor
+          - betzet
+          - nahariya
+          - shavei-zion
+          - akko
+          - kiriat-haim
+          - haifa-casino
+          - haifa-kedarim
+          - atlit
+          - neve-yam
+          - habonim
+          - nahsholim
+          - dor
+          - jisr
+          - michmoret
+          - beit-yanai
+          - blue-bay
+          - herzliya-zabulon
+          - hatsuk
+          - country
+          - tel-baruch
+          - gordon
+          - rishon
+          - ashdod-gil
+          - ashdod-mi-ami
+          - ashdod-citadel
+          - zikim
+          - kinneret
+          - eilat
 
 jobs:
   update-trmnl:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repo
-        uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      - name: Install dependencies
-        run: pip install requests beautifulsoup4
+      - name: Install Dependencies
+        run: |
+          pip install requests beautifulsoup4
 
       - name: Run Surf Script
-        env:
-          TZ: 'Asia/Jerusalem'
-        run: python surf.py
+        run: python surf.py ${{ github.event.inputs.beach }}
+
+      - name: Save Selected Beach Config
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add config.json
+          git diff --staged --quiet || git commit -m "Update active beach config"
+          git push
+        continue-on-error: true
