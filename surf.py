@@ -23,7 +23,6 @@ def get_wax(temp_str):
 
 
 def extract_summary_and_astro(anchor):
-  """מחלץ את הסיכום לחוד (ללא זריחה) ואת נתוני האסטרונומיה לחוד"""
   curr = anchor
   summary_txt = ""
   astro_txt = ""
@@ -32,21 +31,19 @@ def extract_summary_and_astro(anchor):
     if not curr:
       break
     t = curr.get_text(" ", strip=True) if hasattr(curr, "get_text") else ""
+    
     if "זריחה" in t and "שקיעה" in t:
-      # 1. חילוץ האסטרונומיה (זריחה, שקיעה, ירח)
-      astro_m = re.search(r"(זריחה:\s*\d+:\d+.*?שקיעה:\s*\d+:\d+.*?ירח:\s*\d+%)", t)
+      # 1. חילוץ נקי של אסטרונומיה בפורמט: זריחה 06:29 · שקיעה 18:36 · ירח 89%
+      astro_m = re.search(r"זריחה:\s*(\d+:\d+).*?שקיעה:\s*(\d+:\d+).*?ירח:\s*(\d+%)", t)
       if astro_m:
-         astro_txt = re.sub(r'[\U00010000-\U0010ffff\u2600-\u27ff\u2b50\u2190-\u21ff]', '', astro_m.group(1)).strip()
-         astro_txt = astro_txt.replace(":", " ")
-         astro_txt = re.sub(r'\s+', ' ', astro_txt)
-         astro_txt = astro_txt.replace("זריחה", "זריחה").replace("שקיעה", "· שקיעה").replace("ירח", "· ירח")
+        astro_txt = f"זריחה {astro_m.group(1)} · שקיעה {astro_m.group(2)} · ירח {astro_m.group(3)}"
 
-      # 2. חילוץ הסיכום המקורי - חותכים בדיוק לפני המילה "זריחה"
-      parts = t.split("זריחה")
-      if len(parts) > 0:
-          raw_summary = parts[0].strip(" -.")
-          # מנקים אימוג'ים גם מהסיכום ליתר ביטחון
-          summary_txt = re.sub(r'[\U00010000-\U0010ffff\u2600-\u27ff\u2b50\u2190-\u21ff]', '', raw_summary).strip()
+      # 2. חילוץ מדויק של הסיכום בלבד (ממילת "בבוקר" ועד "זריחה") ללא נתוני הטבלה
+      if "בבוקר" in t:
+        raw_summary = "בבוקר" + t.split("בבוקר")[1].split("זריחה")[0]
+        # ניקוי אימוג'ים ורווחים כפולים
+        clean_s = re.sub(r'[\U00010000-\U0010ffff\u2600-\u27ff\u2b50\u2190-\u21ff]', '', raw_summary)
+        summary_txt = re.sub(r'\s+', ' ', clean_s).strip(" -.")
       
       return summary_txt, astro_txt
 
@@ -78,7 +75,6 @@ def get_live_data():
   forecast = []
   current_data = {}
 
-  # גריפת 7 ימים
   for d in range(7):
     anchor = soup.find(id=f"day_{d}")
     if not anchor:
