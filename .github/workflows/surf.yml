@@ -1,0 +1,24 @@
+name: Update TRMNL Surf Forecast
+
+on:
+  schedule:
+    - cron: '0 * * * *' # מריץ אוטומטית כל שעה עגולה 24/7
+  workflow_dispatch: # מאפשר להריץ גם ידנית בלחיצת כפתור
+
+jobs:
+  update-trmnl:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install requests beautifulsoup4
+
+      - name: Run Surf Script
+        run: python surf.py
