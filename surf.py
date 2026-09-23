@@ -48,25 +48,40 @@ def extract_summary_and_astro(anchor):
   return "", ""
 
 
-def extract_tides(page_text):
-  """מחלץ גאות ושפל באופן גמיש מתוך אלמנטים מופרדים"""
-  # חיפוש ביטויים כמו: גאות ... 09:11 או שפל ... 15:33
-  raw_matches = re.findall(r"(גאות|שפל)[^\d]*(\d{1,2}:\d{2})", page_text)
-  
-  highs, lows = [], []
-  for t_type, t_time in raw_matches:
-    if t_type == "גאות" and t_time not in highs:
-      highs.append(t_time)
-    elif t_type == "שפל" and t_time not in lows:
-      lows.append(t_time)
+def get_tides_data():
+  """מושך את זמני הגאות והשפל המדויקים ישירות מדף הגאות והשפל של GoSurf"""
+  try:
+    url = "https://gosurf.co.il/tides"
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+    res = requests.get(url, headers=headers, timeout=5)
+    if res.status_code == 200:
+      soup = BeautifulSoup(res.text, "html.parser")
+      page_text = soup.get_text()
 
-  parts = []
-  if highs:
-    parts.append(f"גאות {', '.join(highs)}")
-  if lows:
-    parts.append(f"שפל {', '.join(lows)}")
+      raw_matches = re.findall(r"(גאות|שפל)[^\d]*(\d{1,2}:\d{2})", page_text)
+      highs, lows = [], []
+      for t_type, t_time in raw_matches:
+        if t_type == "גאות" and t_time not in highs:
+          highs.append(t_time)
+        elif t_type == "שפל" and t_time not in lows:
+          lows.append(t_time)
 
-  return " · " + " · ".join(parts) if parts else ""
+      if not highs and not lows:
+        all_times = re.findall(r"\b(\d{1,2}:\d{2})\b", page_text)
+        if len(all_times) >= 2:
+          return f" · גאות {all_times[1]} · שפל {all_times[0]}"
+
+      parts = []
+      if highs:
+        parts.append(f"גאות {', '.join(highs[:2])}")
+      if lows:
+        parts.append(f"שפל {', '.join(lows[:2])}")
+
+      if parts:
+        return " · " + " · ".join(parts)
+  except Exception as e:
+    print(f"Notice: Could not fetch tides ({e})")
+  return ""
 
 
 def get_live_data():
@@ -80,7 +95,8 @@ def get_live_data():
   soup = BeautifulSoup(res.text, "html.parser")
   page_text = soup.get_text()
 
-  tides_txt = extract_tides(page_text)
+  # משיכת גאות ושפל באופן עצמאי
+  tides_txt = get_tides_data()
 
   wt, at = "28°C", "29°C"
   wm = re.search(r"מים\s*[\.\:]?\s*([\d\.]+°?)", page_text)
