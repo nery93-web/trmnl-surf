@@ -54,6 +54,17 @@ on:
           - zikim
           - kinneret
           - eilat
+      hour:
+        description: 'בחר שעת תחזית לטבלה:'
+        required: true
+        default: '12'
+        type: choice
+        options:
+          - '6'
+          - '9'
+          - '12'
+          - '15'
+          - '18'
 
 jobs:
   update-trmnl:
@@ -74,7 +85,7 @@ jobs:
           pip install requests beautifulsoup4
 
       - name: Run Surf Script
-        run: python surf.py ${{ github.event.inputs.beach }}
+        run: python surf.py "${{ github.event.inputs.beach }}" "${{ github.event.inputs.hour }}"
 
       - name: Save Selected Beach Config
         run: |
