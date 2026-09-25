@@ -364,7 +364,6 @@ def get_live_data(beach_slug, target_hour=12):
 
     return {
         "beach_name": BEACHES.get(beach_slug, beach_slug),
-        "battery": 100,
         "target_hour_str": f"{target_hour:02d}:00",  # <--- השורה החדשה שהוספנו
         "current": current_data,
         "forecast": forecast,
