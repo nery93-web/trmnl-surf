@@ -68,23 +68,26 @@ BEACHES = {
 }
 
 
-def get_active_beach():
-    if len(sys.argv) > 1 and sys.argv[1].strip():
-        beach = sys.argv[1].strip()
-        try:
-            with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-                json.dump({"beach": beach}, f)
-        except Exception:
-            pass
-        return beach
-
+def get_config():
+    config = {"beach": "olga", "target_hour": 12}
     if os.path.exists(CONFIG_FILE):
         try:
             with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-                return json.load(f).get("beach", "olga")
+                loaded = json.load(f)
+                if isinstance(loaded, dict):
+                    config.update(loaded)
         except Exception:
             pass
-    return "olga"
+
+    if len(sys.argv) > 1 and sys.argv[1].strip():
+        config["beach"] = sys.argv[1].strip()
+        try:
+            with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+                json.dump(config, f, ensure_ascii=False, indent=2)
+        except Exception:
+            pass
+
+    return config["beach"], int(config.get("target_hour", 12))
 
 
 def get_wax(temp_str):
@@ -167,7 +170,7 @@ def get_tides_data():
     return ""
 
 
-def get_live_data(beach_slug):
+def get_live_data(beach_slug, target_hour=12):
     url = f"https://gosurf.co.il/forecast/{beach_slug}"
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
 
@@ -317,20 +320,20 @@ def get_live_data(beach_slug):
                 "swell": closest["swell"],
             }
 
-        # 2. חילוץ שורת שעה 12:00 בצהריים באופן מוחלט עבור טבלת התחזית
-        row_12 = None
+        # 2. חילוץ שורת התחזית לפי השעה המבוקשת בטבלת התחזית
+        row_target = None
         if day_rows:
-            row_12 = next((r for r in day_rows if r["hour_num"] == 12), None)
-            if not row_12:
-                row_12 = min(day_rows, key=lambda r: abs(r["hour_num"] - 12))
+            row_target = next((r for r in day_rows if r["hour_num"] == target_hour), None)
+            if not row_target:
+                row_target = min(day_rows, key=lambda r: abs(r["hour_num"] - target_hour))
 
-        if row_12:
-            nums = re.findall(r"\d+", row_12["wave"])
+        if row_target:
+            nums = re.findall(r"\d+", row_target["wave"])
             wave_val = int(nums[-1]) if nums else 40
-            desc_val = row_12["desc"] if row_12["desc"] else "ים גלי"
-            swell_val = row_12["swell"]
-            wind_val = row_12["wind"]
-            icon_val = row_12["icon"]
+            desc_val = row_target["desc"] if row_target["desc"] else "ים גלי"
+            swell_val = row_target["swell"]
+            wind_val = row_target["wind"]
+            icon_val = row_target["icon"]
         else:
             wave_val, desc_val, swell_val, wind_val, icon_val = 40, "ים גלי", "", "", ""
 
@@ -356,10 +359,10 @@ def get_live_data(beach_slug):
 
 
 if __name__ == "__main__":
-    active_beach = get_active_beach()
-    live_data = get_live_data(active_beach)
+    active_beach, target_hour = get_config()
+    live_data = get_live_data(active_beach, target_hour)
     print(
-        f"נאספו {len(live_data['forecast'])} ימים עבור {live_data['beach_name']}. שולח ל-TRMNL...",
+        f"נאספו {len(live_data['forecast'])} ימים עבור {live_data['beach_name']} (שעת תחזית: {target_hour}:00). שולח ל-TRMNL...",
         flush=True,
     )
 
