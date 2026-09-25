@@ -224,11 +224,15 @@ def get_live_data(beach_slug):
           wm_val = re.search(r'(\d+(?:\s*-\s*\d+)?\s*ס[״"]מ)', row_text)
           wave_txt = wm_val.group(1) if wm_val else ""
 
-          wave_desc = ""
+wave_desc = ""
           for w in [
-              "ברך",
+              "מעל ראש",
+              "מעל ברך",
               "קרסול",
+              "ברך",
+              "מותן",
               "חזה",
+              "כתף",
               "ראש",
               "ים גלי",
               "ים נוח",
@@ -238,7 +242,7 @@ def get_live_data(beach_slug):
             if w in row_text:
               wave_desc = w
               break
-
+                
           ws = re.search(r'(\d+\s*קמ[״"]ש)', row_text)
           wd = re.search(
               r"\b(צפון מערבית|דרום מערבית|צפון מזרחית|דרום"
