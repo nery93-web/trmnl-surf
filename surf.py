@@ -79,8 +79,19 @@ def get_config():
         except Exception:
             pass
 
+    # קריאת חוף מהתפריט הנפתח
     if len(sys.argv) > 1 and sys.argv[1].strip():
         config["beach"] = sys.argv[1].strip()
+
+    # קריאת שעה מהתפריט הנפתח
+    if len(sys.argv) > 2 and sys.argv[2].strip():
+        try:
+            config["target_hour"] = int(sys.argv[2].strip())
+        except ValueError:
+            pass
+
+    # שמירה ל-config.json כדי שהבחירה תישמר להרצות האוטומטיות
+    if len(sys.argv) > 1:
         try:
             with open(CONFIG_FILE, "w", encoding="utf-8") as f:
                 json.dump(config, f, ensure_ascii=False, indent=2)
@@ -88,6 +99,7 @@ def get_config():
             pass
 
     return config["beach"], int(config.get("target_hour", 12))
+    
 
 
 def get_wax(temp_str):
