@@ -418,7 +418,7 @@ def get_live_data(beach_slug, target_hour=12):
         "beach_name": BEACHES.get(beach_slug, beach_slug),
         "target_hour_str": f"{target_hour:02d}:00",
         "current": current_data,
-        "forecast": forecast,
+        "updated_at": datetime.now(ZoneInfo("Asia/Jerusalem")).strftime("%H:%M"),
         "graph_points": graph_points,
     }
 
