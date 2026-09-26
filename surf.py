@@ -191,20 +191,22 @@ def get_live_data(beach_slug, target_hour=12):
 
     tides_txt = get_tides_data()
 
-    # --- 1. חילוץ נתוני הלייב מהכרטיסייה העליונה באתר ---
-    top_header_text = page_text[:2500]
+    # --- 1. חילוץ מבוקר ומדויק של נתוני הלייב מהכרטיסייה העליונה ---
+    top_header_text = page_text[:2000]
     
     # גובה גלים בלייב
     top_wave_m = re.search(r'(\d+(?:\s*-\s*\d+)?\s*ס[״"]מ)', top_header_text)
     live_wave = top_wave_m.group(1) if top_wave_m else ""
 
-    # תיאור גל בלייב
+    # תיאור גל בלייב - חיפוש מילה שלמה בלבד (למניעת התאמה ל"ראשון לציון")
     live_desc = ""
     for w in [
-        "מעל ראש", "גובה ראש", "חזה-ראש", "מעל ברך", "ראש", 
-        "כתף", "חזה", "מותן", "ברך", "קרסול", "ים גלי", "ים נוח", "מפתח", "פלטה"
+        "מעל ראש", "גובה ראש", "חזה-ראש", "מעל ברך", 
+        "כתף", "חזה", "מותן", "ברך", "קרסול", "ים גלי", 
+        "ים נוח", "מפתח", "פלטה", "ראש"
     ]:
-        if w in top_header_text:
+        pattern = r'(?<![\u0590-\u05FF])' + re.escape(w) + r'(?![\u0590-\u05FF])'
+        if re.search(pattern, top_header_text):
             live_desc = w
             break
 
@@ -270,11 +272,12 @@ def get_live_data(beach_slug, target_hour=12):
 
                     wave_desc = ""
                     for w in [
-                        "מעל ראש", "גובה ראש", "חזה-ראש", "מעל ברך", "ראש",
-                        "כתף", "חזה", "מותן", "ברך", "קרסול", "ים גלי",
-                        "ים נוח", "מפתח", "פלטה",
+                        "מעל ראש", "גובה ראש", "חזה-ראש", "מעל ברך", 
+                        "כתף", "חזה", "מותן", "ברך", "קרסול", "ים גלי", 
+                        "ים נוח", "מפתח", "פלטה", "ראש"
                     ]:
-                        if w in row_text:
+                        pattern = r'(?<![\u0590-\u05FF])' + re.escape(w) + r'(?![\u0590-\u05FF])'
+                        if re.search(pattern, row_text):
                             wave_desc = w
                             break
 
@@ -329,7 +332,6 @@ def get_live_data(beach_slug, target_hour=12):
                     })
             curr = curr.next_sibling
 
-        # --- 2. בדיקה האם יש כוכב עכשיו (בטבלה בשעה הקרובה) ---
         if d == 0 and day_rows:
             closest = max(
                 [r for r in day_rows if r["hour_num"] <= current_hour],
@@ -352,7 +354,7 @@ def get_live_data(beach_slug, target_hour=12):
                 "desc": live_desc if live_desc else closest["desc"],
                 "wind": live_wind if live_wind else closest["wind"],
                 "swell": live_swell if live_swell else closest["swell"],
-                "is_star": closest["has_star"],  # כוכב בזמן אמת
+                "is_star": closest["has_star"],
             }
 
         row_target = None
