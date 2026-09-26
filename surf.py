@@ -351,19 +351,19 @@ def get_live_data(beach_slug, target_hour=12):
         else:
             wave_val, desc_val, swell_val, wind_val, icon_val = 40, "ים גלי", "", "", ""
 
-        # סינון נקודות לגרף:
-        # 1. היום הראשון (d == 0): 06, 12, 18 ושעת היעד
-        # 2. היום האחרון (d == 6): שעת היעד + שעה 12:00 בצהריים
+        # סינון חכם של נקודות הגרף:
+        # 1. היום הראשון (d == 0): כל השעות ביום (00, 03, 06, 09, 12, 15, 18, 21)
+        # 2. היום האחרון (d == 6): שעת היעד + 12:00 + 21:00 בערב למתיחה עד סוף המסך
         # 3. ימי הביניים (d בטווח 1-5): שעת היעד בלבד
         for r in day_rows:
             is_target = (r == row_target)
             
             include_point = False
             if d == 0:
-                if r["hour_num"] in [6, 12, 18] or is_target:
+                if r["hour_num"] in [0, 3, 6, 9, 12, 15, 18, 21] or is_target:
                     include_point = True
             elif d == 6:
-                if r["hour_num"] == 12 or is_target:
+                if r["hour_num"] in [12, 21] or is_target:
                     include_point = True
             else:
                 if is_target:
