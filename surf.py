@@ -308,7 +308,6 @@ def get_live_data(beach_slug, target_hour=12):
                     })
             curr = curr.next_sibling
 
-        # נתוני השעה הקרובה ביותר להיום בבלוק העליון
         if d == 0 and day_rows:
             closest = max(
                 [r for r in day_rows if r["hour_num"] <= current_hour],
@@ -332,7 +331,6 @@ def get_live_data(beach_slug, target_hour=12):
                 "swell": closest["swell"],
             }
 
-        # מציאת שורת השעה המבוקשת עבור הטבלה והתווית בגרף
         row_target = None
         if day_rows:
             row_target = next(
@@ -353,15 +351,15 @@ def get_live_data(beach_slug, target_hour=12):
         else:
             wave_val, desc_val, swell_val, wind_val, icon_val = 40, "ים גלי", "", "", ""
 
-        # איסוף נקודות מפורטות לגרף העגלגל במהלך היום
+        # מבנה מוקטן לקובץ ה-JSON (חסכון של 1.5KB למניעת חריגה!)
         for r in day_rows:
             r_nums = re.findall(r"\d+", r["wave"])
             r_wave = max(int(n) for n in r_nums) if r_nums else (0 if r["desc"] == "פלטה" else 40)
             graph_points.append({
-                "day_index": d,
-                "hour_num": r["hour_num"],
-                "wave": r_wave,
-                "is_target": (r == row_target),
+                "d": d,
+                "h": r["hour_num"],
+                "w": r_wave,
+                "t": 1 if (r == row_target) else 0,
             })
 
         stars_formatted = f"★ {', '.join(star_details)}" if star_details else ""
@@ -390,7 +388,7 @@ if __name__ == "__main__":
     active_beach, target_hour = get_config()
     live_data = get_live_data(active_beach, target_hour)
     print(
-        f"נאספו {len(live_data['forecast'])} ימים ו-{len(live_data['graph_points'])} נקודות גרף עבור {live_data['beach_name']} (שעה: {target_hour}:00). שולח ל-TRMNL...",
+        f"נאספו {len(live_data['forecast'])} ימים ו-{len(live_data['graph_points'])} נקודות עבור {live_data['beach_name']}. שולח ל-TRMNL...",
         flush=True,
     )
 
