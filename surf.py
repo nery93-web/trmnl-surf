@@ -191,6 +191,35 @@ def get_live_data(beach_slug, target_hour=12):
 
     tides_txt = get_tides_data()
 
+    # --- 1. חילוץ נתוני הלייב מהכרטיסייה העליונה באתר ---
+    top_header_text = page_text[:2500]
+    
+    # גובה גלים בלייב
+    top_wave_m = re.search(r'(\d+(?:\s*-\s*\d+)?\s*ס[״"]מ)', top_header_text)
+    live_wave = top_wave_m.group(1) if top_wave_m else ""
+
+    # תיאור גל בלייב
+    live_desc = ""
+    for w in [
+        "מעל ראש", "גובה ראש", "חזה-ראש", "מעל ברך", "ראש", 
+        "כתף", "חזה", "מותן", "ברך", "קרסול", "ים גלי", "ים נוח", "מפתח", "פלטה"
+    ]:
+        if w in top_header_text:
+            live_desc = w
+            break
+
+    # רוח בלייב
+    live_wind = ""
+    wm_live = re.search(r'רוח:\s*([^\n·<]+)', top_header_text)
+    if wm_live:
+        live_wind = wm_live.group(1).strip()
+
+    # סוואל בלייב
+    live_swell = ""
+    sm_live = re.search(r'סוואל:\s*([^\n·<]+)', top_header_text)
+    if sm_live:
+        live_swell = sm_live.group(1).strip()
+
     wt, at = "28°C", "29°C"
     wm = re.search(r"מים\s*[\.\:]?\s*([\d\.]+°?)", page_text)
     if wm:
@@ -241,20 +270,9 @@ def get_live_data(beach_slug, target_hour=12):
 
                     wave_desc = ""
                     for w in [
-                        "מעל ראש",
-                        "גובה ראש",
-                        "חזה-ראש",
-                        "מעל ברך",
-                        "ראש",
-                        "כתף",
-                        "חזה",
-                        "מותן",
-                        "ברך",
-                        "קרסול",
-                        "ים גלי",
-                        "ים נוח",
-                        "מפתח",
-                        "פלטה",
+                        "מעל ראש", "גובה ראש", "חזה-ראש", "מעל ברך", "ראש",
+                        "כתף", "חזה", "מותן", "ברך", "קרסול", "ים גלי",
+                        "ים נוח", "מפתח", "פלטה",
                     ]:
                         if w in row_text:
                             wave_desc = w
@@ -290,7 +308,9 @@ def get_live_data(beach_slug, target_hour=12):
                     if any(w in row_text for w in ["גשם", "ממטרים", "סערה"]):
                         w_icon = "☂"
 
-                    if "star1.svg" in str(tr):
+                    has_star = "star1.svg" in str(tr)
+
+                    if has_star:
                         star_details.append(
                             f"{hour_str}:00 ({wave_desc})"
                             if wave_desc
@@ -305,15 +325,18 @@ def get_live_data(beach_slug, target_hour=12):
                         "wind": wind_str,
                         "swell": swell_str,
                         "icon": w_icon,
+                        "has_star": has_star,
                     })
             curr = curr.next_sibling
 
+        # --- 2. בדיקה האם יש כוכב עכשיו (בטבלה בשעה הקרובה) ---
         if d == 0 and day_rows:
             closest = max(
                 [r for r in day_rows if r["hour_num"] <= current_hour],
                 key=lambda x: x["hour_num"],
                 default=day_rows[0],
             )
+            
             current_data = {
                 "day_name": day_name,
                 "date": day_date,
@@ -325,10 +348,11 @@ def get_live_data(beach_slug, target_hour=12):
                 "tides": tides_txt,
                 "stars": ", ".join(star_details) if star_details else "",
                 "hour": closest["hour"],
-                "wave": closest["wave"],
-                "desc": closest["desc"],
-                "wind": closest["wind"],
-                "swell": closest["swell"],
+                "wave": live_wave if live_wave else closest["wave"],
+                "desc": live_desc if live_desc else closest["desc"],
+                "wind": live_wind if live_wind else closest["wind"],
+                "swell": live_swell if live_swell else closest["swell"],
+                "is_star": closest["has_star"],  # כוכב בזמן אמת
             }
 
         row_target = None
@@ -351,10 +375,6 @@ def get_live_data(beach_slug, target_hour=12):
         else:
             wave_val, desc_val, swell_val, wind_val, icon_val = 40, "ים גלי", "", "", ""
 
-        # סינון חכם של נקודות הגרף:
-        # 1. היום הראשון (d == 0): כל השעות ביום (00, 03, 06, 09, 12, 15, 18, 21)
-        # 2. היום האחרון (d == 6): שעת היעד + 12:00 + 21:00 בערב למתיחה עד סוף המסך
-        # 3. ימי הביניים (d בטווח 1-5): שעת היעד בלבד
         for r in day_rows:
             is_target = (r == row_target)
             
