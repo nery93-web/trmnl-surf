@@ -414,11 +414,12 @@ def get_live_data(beach_slug, target_hour=12):
             "icon": icon_val,
         })
 
-    return {
+return {
         "beach_name": BEACHES.get(beach_slug, beach_slug),
         "target_hour_str": f"{target_hour:02d}:00",
-        "current": current_data,
         "updated_at": datetime.now(ZoneInfo("Asia/Jerusalem")).strftime("%H:%M"),
+        "current": current_data,
+        "forecast": forecast,
         "graph_points": graph_points,
     }
 
