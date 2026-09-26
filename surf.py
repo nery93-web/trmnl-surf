@@ -79,18 +79,15 @@ def get_config():
         except Exception:
             pass
 
-    # קריאת חוף מהתפריט הנפתח
     if len(sys.argv) > 1 and sys.argv[1].strip():
         config["beach"] = sys.argv[1].strip()
 
-    # קריאת שעה מהתפריט הנפתח
     if len(sys.argv) > 2 and sys.argv[2].strip():
         try:
             config["target_hour"] = int(sys.argv[2].strip())
         except ValueError:
             pass
 
-    # שמירה ל-config.json כדי שהבחירה תישמר להרצות האוטומטיות
     if len(sys.argv) > 1:
         try:
             with open(CONFIG_FILE, "w", encoding="utf-8") as f:
@@ -99,7 +96,6 @@ def get_config():
             pass
 
     return config["beach"], int(config.get("target_hour", 12))
-    
 
 
 def get_wax(temp_str):
@@ -206,6 +202,7 @@ def get_live_data(beach_slug, target_hour=12):
 
     current_hour = datetime.now(ZoneInfo("Asia/Jerusalem")).hour
     forecast = []
+    graph_points = []
     current_data = {}
 
     for d in range(7):
@@ -236,7 +233,10 @@ def get_live_data(beach_slug, target_hour=12):
                         continue
                     hour_str = hm.group(1)
 
-                    wm_val = re.search(r'(\d+(?:\s*-\s*\d+)?\s*ס[״"]מ)', row_text)
+                    wm_val = re.search(
+                        r'([\d\.]+(?:\s*-\s*[\d\.]+)?\s*(?:ס[״"]מ|מטר|מ\'))',
+                        row_text,
+                    )
                     wave_txt = wm_val.group(1) if wm_val else ""
 
                     wave_desc = ""
@@ -308,7 +308,7 @@ def get_live_data(beach_slug, target_hour=12):
                     })
             curr = curr.next_sibling
 
-        # 1. נתוני הבלוק העליון להיום (השעה הקרובה ביותר כרגע)
+        # נתוני השעה הקרובה ביותר להיום בבלוק העליון
         if d == 0 and day_rows:
             closest = max(
                 [r for r in day_rows if r["hour_num"] <= current_hour],
@@ -332,22 +332,37 @@ def get_live_data(beach_slug, target_hour=12):
                 "swell": closest["swell"],
             }
 
-        # 2. חילוץ שורת התחזית לפי השעה המבוקשת בטבלת התחזית
+        # מציאת שורת השעה המבוקשת עבור הטבלה והתווית בגרף
         row_target = None
         if day_rows:
-            row_target = next((r for r in day_rows if r["hour_num"] == target_hour), None)
+            row_target = next(
+                (r for r in day_rows if r["hour_num"] == target_hour), None
+            )
             if not row_target:
-                row_target = min(day_rows, key=lambda r: abs(r["hour_num"] - target_hour))
+                row_target = min(
+                    day_rows, key=lambda r: abs(r["hour_num"] - target_hour)
+                )
 
         if row_target:
             nums = re.findall(r"\d+", row_target["wave"])
-            wave_val = int(nums[-1]) if nums else 40
+            wave_val = max(int(n) for n in nums) if nums else (0 if row_target["desc"] == "פלטה" else 40)
             desc_val = row_target["desc"] if row_target["desc"] else "ים גלי"
             swell_val = row_target["swell"]
             wind_val = row_target["wind"]
             icon_val = row_target["icon"]
         else:
             wave_val, desc_val, swell_val, wind_val, icon_val = 40, "ים גלי", "", "", ""
+
+        # איסוף נקודות מפורטות לגרף העגלגל במהלך היום
+        for r in day_rows:
+            r_nums = re.findall(r"\d+", r["wave"])
+            r_wave = max(int(n) for n in r_nums) if r_nums else (0 if r["desc"] == "פלטה" else 40)
+            graph_points.append({
+                "day_index": d,
+                "hour_num": r["hour_num"],
+                "wave": r_wave,
+                "is_target": (r == row_target),
+            })
 
         stars_formatted = f"★ {', '.join(star_details)}" if star_details else ""
 
@@ -364,9 +379,10 @@ def get_live_data(beach_slug, target_hour=12):
 
     return {
         "beach_name": BEACHES.get(beach_slug, beach_slug),
-        "target_hour_str": f"{target_hour:02d}:00",  # <--- השורה החדשה שהוספנו
+        "target_hour_str": f"{target_hour:02d}:00",
         "current": current_data,
         "forecast": forecast,
+        "graph_points": graph_points,
     }
 
 
@@ -374,7 +390,7 @@ if __name__ == "__main__":
     active_beach, target_hour = get_config()
     live_data = get_live_data(active_beach, target_hour)
     print(
-        f"נאספו {len(live_data['forecast'])} ימים עבור {live_data['beach_name']} (שעת תחזית: {target_hour}:00). שולח ל-TRMNL...",
+        f"נאספו {len(live_data['forecast'])} ימים ו-{len(live_data['graph_points'])} נקודות גרף עבור {live_data['beach_name']} (שעה: {target_hour}:00). שולח ל-TRMNL...",
         flush=True,
     )
 
