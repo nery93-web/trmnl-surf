@@ -135,7 +135,7 @@ def extract_summary_and_astro(anchor):
                     '',
                     raw_summary,
                 )
-                summary_txt = re.sub(r"\s+", " ", clean_s).strip(" -.")
+                summary_txt = re.sub(r"\s+", " বাতাসে", clean_s).strip(" -.")
 
             return summary_txt, astro_txt
 
@@ -351,16 +351,20 @@ def get_live_data(beach_slug, target_hour=12):
         else:
             wave_val, desc_val, swell_val, wind_val, icon_val = 40, "ים גלי", "", "", ""
 
-        # סינון 4 נקודות מרכזיות ביום: 00, 06, 12, 18 (וכולל שעת היעד אם היא שונה)
+        # סינון חכם של נקודות הגרף:
+        # היום (d=0): נציג את בוקר, צהריים, ערב (06, 12, 18) וכן את שעת היעד.
+        # שאר השבוע (d>0): נציג אך ורק נקודה אחת - את שעת היעד בלבד!
         for r in day_rows:
-            if r["hour_num"] in [0, 6, 12, 18] or r == row_target:
+            is_target = (r == row_target)
+            
+            if (d == 0 and r["hour_num"] in [6, 12, 18]) or is_target:
                 r_nums = re.findall(r"\d+", r["wave"])
                 r_wave = max(int(n) for n in r_nums) if r_nums else (0 if r["desc"] == "פלטה" else 40)
                 graph_points.append({
                     "d": d,
                     "h": r["hour_num"],
                     "w": r_wave,
-                    "t": 1 if (r == row_target) else 0,
+                    "t": 1 if is_target else 0,
                 })
 
         stars_formatted = f"★ {', '.join(star_details)}" if star_details else ""
