@@ -135,7 +135,7 @@ def extract_summary_and_astro(anchor):
                     '',
                     raw_summary,
                 )
-                summary_txt = re.sub(r"\s+", " বাতাসে", clean_s).strip(" -.")
+                summary_txt = re.sub(r"\s+", " ", clean_s).strip(" -.")
 
             return summary_txt, astro_txt
 
