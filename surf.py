@@ -351,16 +351,17 @@ def get_live_data(beach_slug, target_hour=12):
         else:
             wave_val, desc_val, swell_val, wind_val, icon_val = 40, "ים גלי", "", "", ""
 
-        # מבנה מוקטן לקובץ ה-JSON (חסכון של 1.5KB למניעת חריגה!)
+        # סינון 4 נקודות מרכזיות ביום: 00, 06, 12, 18 (וכולל שעת היעד אם היא שונה)
         for r in day_rows:
-            r_nums = re.findall(r"\d+", r["wave"])
-            r_wave = max(int(n) for n in r_nums) if r_nums else (0 if r["desc"] == "פלטה" else 40)
-            graph_points.append({
-                "d": d,
-                "h": r["hour_num"],
-                "w": r_wave,
-                "t": 1 if (r == row_target) else 0,
-            })
+            if r["hour_num"] in [0, 6, 12, 18] or r == row_target:
+                r_nums = re.findall(r"\d+", r["wave"])
+                r_wave = max(int(n) for n in r_nums) if r_nums else (0 if r["desc"] == "פלטה" else 40)
+                graph_points.append({
+                    "d": d,
+                    "h": r["hour_num"],
+                    "w": r_wave,
+                    "t": 1 if (r == row_target) else 0,
+                })
 
         stars_formatted = f"★ {', '.join(star_details)}" if star_details else ""
 
