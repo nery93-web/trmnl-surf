@@ -191,14 +191,13 @@ def get_live_data(beach_slug, target_hour=12):
 
     tides_txt = get_tides_data()
 
-    # --- 1. חילוץ מבוקר ומדויק של נתוני הלייב מהכרטיסייה העליונה ---
-    top_header_text = page_text[:2000]
+    # --- 1. חילוץ מבוקר מהקופסאות העליונות של GoSurf (Live Data) ---
+    top_header_text = page_text[:2500]
     
     # גובה גלים בלייב
     top_wave_m = re.search(r'(\d+(?:\s*-\s*\d+)?\s*ס[״"]מ)', top_header_text)
     live_wave = top_wave_m.group(1) if top_wave_m else ""
 
-    # תיאור גל בלייב - חיפוש מילה שלמה בלבד (למניעת התאמה ל"ראשון לציון")
     live_desc = ""
     for w in [
         "מעל ראש", "גובה ראש", "חזה-ראש", "מעל ברך", 
@@ -210,17 +209,66 @@ def get_live_data(beach_slug, target_hour=12):
             live_desc = w
             break
 
-    # רוח בלייב
+    # -- נסיון 1: חילוץ רוח מהקופסה הייעודית בלייב באמצעות BeautifulSoup --
     live_wind = ""
-    wm_live = re.search(r'רוח:\s*([^\n·<]+)', top_header_text)
-    if wm_live:
-        live_wind = wm_live.group(1).strip()
+    try:
+        wind_label = soup.find(string=re.compile(r"^\s*רוח\s*$"))
+        if wind_label:
+            wind_box = wind_label.find_parent('div').parent
+            wind_parts = [t.strip() for t in wind_box.stripped_strings if t.strip() and t.strip() != 'רוח']
+            if wind_parts:
+                raw_wind = " ".join(wind_parts)
+                live_wind = (
+                    raw_wind.replace("צפון מערבית", "צפ-מע")
+                    .replace("דרום מערבית", "דר-מע")
+                    .replace("צפון מזרחית", "צפ-מז")
+                    .replace("דרום מזרחית", "דר-מז")
+                )
+    except Exception:
+        pass
 
-    # סוואל בלייב
+    # -- גיבוי: חילוץ רוח אם BeautifulSoup נכשל (Regex על כל החלק העליון) --
+    if not live_wind:
+        wind_box_match = re.search(r'רוח\s*(\d+\s*קמ[״"]ש)\s*(צפון מערבית|דרום מערבית|צפון מזרחית|דרום מזרחית|מערבית|מזרחית|צפונית|דרומית)', top_header_text)
+        if not wind_box_match:
+             wind_box_match = re.search(r'(צפון מערבית|דרום מערבית|צפון מזרחית|דרום מזרחית|מערבית|מזרחית|צפונית|דרומית)\s*(\d+\s*קמ[״"]ש).*?רוח', top_header_text, re.DOTALL)
+
+        if wind_box_match:
+            w_dir = wind_box_match.group(2) if 'קמ' in wind_box_match.group(1) else wind_box_match.group(1)
+            w_spd = wind_box_match.group(1) if 'קמ' in wind_box_match.group(1) else wind_box_match.group(2)
+            w_dir = w_dir.replace("צפון מערבית", "צפ-מע").replace("דרום מערבית", "דר-מע").replace("צפון מזרחית", "צפ-מז").replace("דרום מזרחית", "דר-מז")
+            live_wind = f"{w_dir} {w_spd}".strip()
+        else:
+            wm_live = re.search(r'רוח:\s*([^\n·<]+)', top_header_text)
+            if wm_live:
+                live_wind = wm_live.group(1).strip()
+
+    # -- נסיון 1: חילוץ סוואל מהקופסה הייעודית --
     live_swell = ""
-    sm_live = re.search(r'סוואל:\s*([^\n·<]+)', top_header_text)
-    if sm_live:
-        live_swell = sm_live.group(1).strip()
+    try:
+        swell_label = soup.find(string=re.compile(r"^\s*סוואל\s*$"))
+        if swell_label:
+            swell_box = swell_label.find_parent('div').parent
+            swell_parts = [t.strip() for t in swell_box.stripped_strings if t.strip() and t.strip() != 'סוואל']
+            if swell_parts:
+                live_swell = " ".join(swell_parts)
+    except Exception:
+        pass
+
+    # -- גיבוי: חילוץ סוואל במידה ולא נמצא (Regex) --
+    if not live_swell:
+        swell_box_match = re.search(r'סוואל\s*(\d+(?:\.\d+)?)\s*שניות\s*(צפון מערבי|דרום מערבי|צפון מזרחי|דרום מזרחי|מערבי|מזרחי|צפוני|דרומי)', top_header_text)
+        if not swell_box_match:
+            swell_box_match = re.search(r'(צפון מערבי|דרום מערבי|צפון מזרחי|דרום מזרחי|מערבי|מזרחי|צפוני|דרומי)\s*(\d+(?:\.\d+)?)\s*שניות.*?סוואל', top_header_text, re.DOTALL)
+
+        if swell_box_match:
+            s_dir = swell_box_match.group(2) if 'שניות' not in swell_box_match.group(1) else swell_box_match.group(1)
+            s_spd = swell_box_match.group(1) if 'שניות' not in swell_box_match.group(1) else swell_box_match.group(2)
+            live_swell = f"{s_dir} ({s_spd} שניות)".strip()
+        else:
+            sm_live = re.search(r'סוואל:\s*([^\n·<]+)', top_header_text)
+            if sm_live:
+                live_swell = sm_live.group(1).strip()
 
     wt, at = "28°C", "29°C"
     wm = re.search(r"מים\s*[\.\:]?\s*([\d\.]+°?)", page_text)
