@@ -147,7 +147,7 @@ def get_tides_data():
     try:
         url = "https://gosurf.co.il/tides"
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-        res = requests.get(url, headers=headers, timeout=5)
+        res = requests.get(url, headers=headers, impersonate="chrome120", timeout=10)
         if res.status_code == 200:
             soup = BeautifulSoup(res.text, "html.parser")
             page_text = soup.get_text()
