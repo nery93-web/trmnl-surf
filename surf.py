@@ -146,11 +146,7 @@ def extract_summary_and_astro(anchor):
 def get_tides_data():
     try:
         url = "https://gosurf.co.il/tides"
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-            'Accept-Language': 'he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7',
-        }
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
         res = requests.get(url, headers=headers, timeout=5)
         if res.status_code == 200:
             soup = BeautifulSoup(res.text, "html.parser")
@@ -184,32 +180,11 @@ def get_tides_data():
 
 def get_live_data(beach_slug, target_hour=12):
     url = f"https://gosurf.co.il/forecast/{beach_slug}"
-    
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-        'Accept-Language': 'he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7',
-        'Cache-Control': 'max-age=0',
-        'Upgrade-Insecure-Requests': '1',
-        'Sec-Ch-Ua': '"Chromium";v="128", "Not=A?Brand";v="24", "Google Chrome";v="128"',
-        'Sec-Ch-Ua-Mobile': '?0',
-        'Sec-Ch-Ua-Platform': '"Windows"',
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'none',
-        'Sec-Fetch-User': '?1'
-    }
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
 
     print(f"1. מוריד נתונים מעודכנים עבור {beach_slug} מ-GoSurf...", flush=True)
-    
-    try:
-        res = requests.get(url, headers=headers, timeout=10)
-        res.raise_for_status()
-    except requests.exceptions.HTTPError as e:
-        print(f"Warning: Primary request failed ({e}), retrying with fallback headers...")
-        headers['User-Agent'] = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
-        res = requests.get(url, headers=headers, timeout=10)
-        res.raise_for_status()
+    res = requests.get(url, headers=headers, timeout=10)
+    res.raise_for_status()
 
     soup = BeautifulSoup(res.text, "html.parser")
     page_text = soup.get_text()
@@ -256,7 +231,7 @@ def get_live_data(beach_slug, target_hour=12):
     if not live_wind:
         wind_box_match = re.search(r'רוח\s*(\d+\s*קמ[״"]ש)\s*(צפון מערבית|דרום מערבית|צפון מזרחית|דרום מזרחית|מערבית|מזרחית|צפונית|דרומית)', top_header_text)
         if not wind_box_match:
-            wind_box_match = re.search(r'(צפון מערבית|דרום מערבית|צפון מזרחית|דרום מזרחית|מערבית|מזרחית|צפונית|דרומית)\s*(\d+\s*קמ[״"]ש).*?רוח', top_header_text, re.DOTALL)
+             wind_box_match = re.search(r'(צפון מערבית|דרום מערבית|צפון מזרחית|דרום מזרחית|מערבית|מזרחית|צפונית|דרומית)\s*(\d+\s*קמ[״"]ש).*?רוח', top_header_text, re.DOTALL)
 
         if wind_box_match:
             w_dir = wind_box_match.group(2) if 'קמ' in wind_box_match.group(1) else wind_box_match.group(1)
