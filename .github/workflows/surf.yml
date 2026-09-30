@@ -82,7 +82,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install requests beautifulsoup4 curl-cffi
+          pip install requests beautifulsoup4
 
       - name: Run Surf Script
         run: python surf.py "${{ github.event.inputs.beach }}" "${{ github.event.inputs.hour }}"
