@@ -4,7 +4,7 @@ import re
 import sys
 from datetime import datetime
 from zoneinfo import ZoneInfo
-import requests
+from curl_cffi import requests
 from bs4 import BeautifulSoup
 
 TRMNL_WEBHOOK_URL = (
@@ -183,7 +183,7 @@ def get_live_data(beach_slug, target_hour=12):
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
 
     print(f"1. מוריד נתונים מעודכנים עבור {beach_slug} מ-GoSurf...", flush=True)
-    res = requests.get(url, headers=headers, timeout=10)
+    res = requests.get(url, headers=headers, impersonate="chrome120", timeout=10)
     res.raise_for_status()
 
     soup = BeautifulSoup(res.text, "html.parser")
