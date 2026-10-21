@@ -81,7 +81,7 @@ def get_trmnl_battery():
     }
 
     try:
-        res = requests.get("https://trmnl.com/api/v1/devices", headers=headers, timeout=8)
+        res = requests.get("https://trmnl.com/api/devices", headers=headers, timeout=8)
         if res.status_code == 200:
             devices = res.json().get("data", [])
             for dev in devices:
