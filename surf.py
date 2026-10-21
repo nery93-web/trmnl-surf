@@ -75,6 +75,7 @@ def get_trmnl_battery():
         return 100
 
     headers = {
+        "access-token": api_token,
         "Authorization": f"Bearer {api_token}",
         "Accept": "application/json",
     }
@@ -491,6 +492,8 @@ def get_live_data(beach_slug, target_hour=12):
             "stars": stars_formatted,
             "icon": icon_val,
         })
+        
+    battery_level = get_trmnl_battery()
 
     return {
         "beach_name": BEACHES.get(beach_slug, beach_slug),
