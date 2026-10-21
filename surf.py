@@ -11,6 +11,7 @@ TRMNL_WEBHOOK_URL = (
     "https://trmnl.com/api/custom_plugins/37c611d4-1b97-4e82-935d-48867bf20424"
 )
 CONFIG_FILE = "config.json"
+DEVICE_FRIENDLY_ID = "1FLGLA"
 
 BEACHES = {
     # צפון
@@ -66,6 +67,35 @@ BEACHES = {
     "kinneret": "כנרת",
     "eilat": "אילת",
 }
+
+
+def get_trmnl_battery():
+    api_token = os.environ.get("TRMNL_API_TOKEN")
+    if not api_token:
+        return 100
+
+    headers = {
+        "Authorization": f"Bearer {api_token}",
+        "Accept": "application/json",
+    }
+
+    try:
+        res = requests.get("https://trmnl.com/api/v1/devices", headers=headers, timeout=8)
+        if res.status_code == 200:
+            devices = res.json().get("data", [])
+            for dev in devices:
+                if dev.get("friendly_id") == DEVICE_FRIENDLY_ID:
+                    percent = dev.get("percent_charged") or dev.get("battery_percent")
+                    if percent is not None:
+                        return int(percent)
+                    voltage = dev.get("battery_voltage")
+                    if voltage:
+                        calc = int(round((float(voltage) - 3.3) / (4.2 - 3.3) * 100))
+                        return max(0, min(100, calc))
+    except Exception:
+        pass
+    return 100
+    
 
 
 def get_config():
