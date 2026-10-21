@@ -499,6 +499,7 @@ def get_live_data(beach_slug, target_hour=12):
         "current": current_data,
         "forecast": forecast,
         "graph_points": graph_points,
+        "battery": battery_level,   # <--- הוספנו את השורה הזו
     }
 
 
